@@ -1,17 +1,11 @@
-[build-system]
-requires = ["flit_core >=3.2,<4"]
-build-backend = "flit_core.buildapi"
-
 [project]
 name = "akrocansim"
 dynamic = ["version", "description"]
-authors = [{name = "Socrates Vlassis", email = "socrates.vlassis@gmail.com"}]
+authors = [{name = "pullthebox", email = "socrates.vlassis@gmail.com"}]
 readme = "README.md"
 license = {file = "LICENSE"}
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: MIT License",
     "Development Status :: 4 - Beta",
     "Topic :: Software Development :: Embedded Systems",
@@ -19,13 +13,23 @@ classifiers = [
     "Topic :: Software Development :: Embedded Systems :: Controller Area Network (CAN) :: J1939"
 ]
 keywords = ["J1939", "CAN bus"]
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 dependencies = [
-    "dearpygui~=1.10.1",
-    "python-can~=4.3.1",
-    "openpyxl~=3.1.2",
-    "semver~=3.0.2"
+    "dearpygui==2.0.0",
+    "python-can==4.5.0",
+    "openpyxl==3.1.5",
+    "semver==3.0.4",
 ]
+
+[project.scripts]
+akrocansim = "akrocansim:main"
 
 [project.urls]
 Home = "https://github.com/cfsok/akrocansim"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/akrocansim/__init__.py"

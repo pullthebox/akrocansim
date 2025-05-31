@@ -28,11 +28,14 @@ A CAN bus J1939 controller simulator.
 ![PCAN-View demo screenshot](https://raw.githubusercontent.com/cfsok/akrocansim/main/docs/images/demo_1_PCAN-View.png)
 
 ## Installation
-Python 3.11 (64-bit) or higher is required.
+1. Install uv, see https://docs.astral.sh/uv/getting-started/installation/#installing-uv
+2. `uv tool install akrocansim`
 
+## Execution
 ```
-pip install akrocansim
+akrocansim
 ```
+
 
 ## Prerequisites
 - A hardware CAN interface supported by python-can,
@@ -40,10 +43,6 @@ see https://python-can.readthedocs.io/en/v4.3.1/interfaces.html.
 - A version of J1939 Digital Annex (J1939DA) from SAE International, see https://www.sae.org/standards/?search=j1939DA.
 - A way to convert `.xls` to `.xlsx` if your copy of the J1939DA is in `.xls` format.
 
-## Usage
-```
-python -m akrocansim
-```
 
 Upon initial run, a folder named `akrocansim` is created in your home folder hosting a starting configuration file.
 

@@ -1,3 +1,0 @@
-dearpygui ~= 1.10.1
-python-can ~= 4.3.1
-openpyxl ~= 3.1.2

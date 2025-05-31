@@ -3,13 +3,10 @@ import time
 import can
 
 
-_TX_MODE = 0
-_TX_MODE__STOP = 0  # global, local
-_TX_MODE__TX_CONT = 1  # global, local
-_TX_MODE__PER_PGN = 2  # global only
-_TX_MODE__TX_ONCE = 3  # local only
-_TX_RATE_SEC = 1
-_DATA = 2
+_INDIVIDUAL_TX_MODE__TX_CONT = 0
+_INDIVIDUAL_TX_MODE__TX_ONCE = 1
+_TX_RATE_SEC = 2
+_DATA = 3
 
 
 class Transmitter:
@@ -18,9 +15,12 @@ class Transmitter:
         self.bus: can.BusABC = None
         self.PGNs_pending_tx = {}
 
-        self.global_tx_mode = _TX_MODE__STOP  # _TX_MODE__STOP, _TX_MODE__TX_CONT, _TX_MODE__PER_PGN
+        self.global_tx_mode__stop = True
+        self.global_tx_mode__cont = False
+        self.global_tx_mode__per_pgn = False
         self.tx_CAN_IDs = {}  # {(CAN_ID: int, is_extended: bool): {
-                              #     _TX_MODE: _TX_MODE__STOP, _TX_MODE__TX_CONT, _TX_MODE__TX_ONCE
+                              #     _INDIVIDUAL_TX_MODE__TX_CONT: bool,
+                              #     _INDIVIDUAL_TX_MODE__TX_ONCE: bool,
                               #     _TX_RATE_SEC: #,
                               #     _DATA: list
                               # }
@@ -32,7 +32,8 @@ class Transmitter:
         self.J1939_CAN_IDs[pgn] = (can_id, True)
         tx_rate_sec = tx_rate_ms / 1000
         self.tx_CAN_IDs[(can_id, True)] = {
-            _TX_MODE: _TX_MODE__STOP,
+            _INDIVIDUAL_TX_MODE__TX_CONT: False,
+            _INDIVIDUAL_TX_MODE__TX_ONCE: False,
             _TX_RATE_SEC: tx_rate_sec,
             _DATA: [0 for _ in range(self._J1939[pgn]['PGN Data Length'])]
         }
@@ -43,42 +44,49 @@ class Transmitter:
 
         while True:
             time.sleep(signal_spec[_TX_RATE_SEC])
-            if self.global_tx_mode == _TX_MODE__TX_CONT or signal_spec[_TX_MODE] == _TX_MODE__TX_CONT:
+            if self.global_tx_mode__cont or (self.global_tx_mode__per_pgn and signal_spec[_INDIVIDUAL_TX_MODE__TX_CONT]):
+                # transmit can message with 'can_id' this cycle
                 pass
-            elif self.global_tx_mode in [_TX_MODE__STOP, _TX_MODE__PER_PGN] \
-                    and signal_spec[_TX_MODE] == _TX_MODE__TX_ONCE:
-                signal_spec[_TX_MODE] = _TX_MODE__STOP
+            elif signal_spec[_INDIVIDUAL_TX_MODE__TX_ONCE]:
+                # transmit can message with 'can_id' this cycle and stop
+                signal_spec[_INDIVIDUAL_TX_MODE__TX_ONCE] = False
             else:
+                # do not transmit can message with 'can_id' this cycle
                 continue
 
             if self.bus is not None:
                 try:
-                    self.bus.send(can.Message(arbitration_id=can_id, is_extended_id=is_extended,
-                                              data=signal_spec[_DATA]))
+                    self.bus.send(can.Message(arbitration_id=can_id, is_extended_id=is_extended, data=signal_spec[_DATA]))
                 except can.CanOperationError:
                     pass
 
     def set_tx_mode_stop(self, pgn=None):
-        if pgn is None:
-            self.global_tx_mode = _TX_MODE__STOP
-        else:
-            self.tx_CAN_IDs[self.J1939_CAN_IDs[pgn]][_TX_MODE] = _TX_MODE__STOP
+        if pgn is None:  # global
+            self.global_tx_mode__stop = True
+            self.global_tx_mode__cont = False
+            self.global_tx_mode__per_pgn = False
+        else:  # individual
+            self.tx_CAN_IDs[self.J1939_CAN_IDs[pgn]][_INDIVIDUAL_TX_MODE__TX_CONT] = False
 
     def set_tx_mode_continuous(self, pgn=None):
-        if pgn is None:
-            self.global_tx_mode = _TX_MODE__TX_CONT
-        else:
-            self.tx_CAN_IDs[self.J1939_CAN_IDs[pgn]][_TX_MODE] = _TX_MODE__TX_CONT
+        if pgn is None:  # global
+            self.global_tx_mode__stop = False
+            self.global_tx_mode__cont = True
+            self.global_tx_mode__per_pgn = False
+        else:  # individual
+            self.tx_CAN_IDs[self.J1939_CAN_IDs[pgn]][_INDIVIDUAL_TX_MODE__TX_CONT] = True
 
     def set_tx_mode_per_PGN(self):
-        self.global_tx_mode = _TX_MODE__PER_PGN
+        self.global_tx_mode__stop = False
+        self.global_tx_mode__cont = False
+        self.global_tx_mode__per_pgn = True
 
     def set_tx_once(self, pgn=None):
-        if pgn is None:
+        if pgn is None:  # global
             for signal_spec in self.tx_CAN_IDs.values():
-                signal_spec[_TX_MODE] = _TX_MODE__TX_ONCE
-        else:
-            self.tx_CAN_IDs[self.J1939_CAN_IDs[pgn]][_TX_MODE] = _TX_MODE__TX_ONCE
+                signal_spec[_INDIVIDUAL_TX_MODE__TX_ONCE] = True
+        else:  # individual
+            self.tx_CAN_IDs[self.J1939_CAN_IDs[pgn]][_INDIVIDUAL_TX_MODE__TX_ONCE] = True
 
     def modify_pgn_tx_rate(self, pgn, tx_rate_ms):
         tx_rate_sec = tx_rate_ms / 1000
